@@ -2,23 +2,44 @@
 % Use option lineno for line numbers 
 
 \usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{vhistory}
+\usepackage{setspace}
+\usepackage{etoolbox}
+
+\usepackage{array}
+
+\pdfpageheight=\paperheight
+\pdfpagewidth=\paperwidth
+\setlength\oddsidemargin{\dimexpr(\paperwidth-\textwidth)/2 - 1in\relax}
+\setlength\evensidemargin{\oddsidemargin}
 
 \title{DUNE Timing System (DTS) Safety Engineering Design Review (SEDR) Documentation for GPS Interface Board (GIB)}
 
-\author[1]{D. Antic}
 \author[1]{D. Cussans}
 \author[2]{J. Sensenig}
 \author[1]{S. Trilov}
 \affil[1]{H.H. Wills Physics Laboratory, Bristol, UK}
 \affil[2]{David Rittenhouse Laboratory, Philadelphia, USA}
 
+\AtBeginEnvironment{tabular}{\doublespacing}
+
+\newcolumntype{L}[1]{>{\raggedright\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{C}[1]{>{\centering\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+\newcolumntype{R}[1]{>{\raggedleft\let\newline\\\arraybackslash\hspace{0pt}}m{#1}}
+
 \begin{document}
 
 
-%\keywords{Keyword1, Keyword2, Keyword3}
+\keywords{DUNE,Timing System,Safety,SEDR,GIB}
 
 \begin{abstract}
-This document provides information needed for a review of the electrical safety of the DUNE Timing System(DTS) GPS Interface Board (GIB). An overview of the DTS hardware is given in EDMS document EDMS-XXXXX and should be read in conjunction with this document.
+This document provides information needed for a review of the electrical safety of the DUNE Timing System(DTS) GPS Interface Board (GIB). A overview of the electrical safety of the DTS hardware is given in EDMS document \href{https://edms.cern.ch/document/3057172/1}{EDMS 3057172}\cite{ref:dts-sedr-overview} and should be read in conjunction with this document.
+
+\textsc{document source:}\\
+{\bf EDMS:} xxxxxx \\
+{\bf Overleaf:}  \url{https://www.overleaf.com/read/pkbtxcsyysyt\#0d8f4a}
+
 \end{abstract}
 
 
@@ -26,11 +47,30 @@ This document provides information needed for a review of the electrical safety 
 
 \maketitle
 
-\thispagestyle{empty}
+% Start of the revision history table
+\begin{versionhistory}
+  \vhEntry{1.0}{10/Jan/25}{DGC}{created}
+\end{versionhistory}
+
+\section*{Document Approvals}
+
+\begin{table}[tbh]
+    \centering
+    \begin{tabular}{p{0.6\textwidth}|R{0.35\textwidth}}
+        Signatures Required   &  Signature and Date Approved\\ \hline
+        Originator: D. Cussans                     &  AAAA  X/YYY/ZZ \\
+        Approver: R. Sipos (DAQ Technical Lead)    &  AAAA   X/YYY/ZZ  \\
+        Approver: W. Ketchum (DAQ Consortium Lead)    &  AAAA    X/YYY/ZZ  \\
+        Approver: T. Shaw (DUNE Compliance Office) &  AAAA X/YYY/ZZ           \\
+    \end{tabular}
+    \label{tab:approvals}
+\end{table}
+\newpage
+%\thispagestyle{empty}
 
 \section{Introduction}
 
-The DUNE Timing System has hardware components both above ground and below ground. At the far detector the above ground hardware will be at the SURF Ross and Yates areas and the below ground in the DAQ cabins above each far detector cryostat. At the near detector the above ground hardware will be at Fermilab in a location accessible to the ACLK,TCLK and BSCLK accelerator signals with the below ground hardware in the near detector hall.
+The DUNE Timing System has hardware components both above ground and below ground. At the far detector the above ground hardware will be at the SURF Ross and Yates areas and the below ground in the DAQ cabins above each far detector cryostat. At the near detector the above ground hardware will be at Fermilab in a location accessible to cables carrying synchronization information from the accelerator complex with the below ground hardware in the near detector hall.
 
 The above ground hardware at each of the Ross and Yates areas consists of a COTS GPS disciplined oscillator with associated antenna, lightning protection etc. providing timing information to a custom GPS Interface Board (GIB). The below ground hardware in each of the far detector caverns consists of a COTS MicroTCA crate housing COTS PSUs, MCH, JSM and fan-trays along with a custom MicroTCA Inteface Board (MIB) and multiple semi-custom FPGA based AFC boards hosting custom Fibre Interface Boards (FIBs). Each far detector cavern will have two MicroTCA crates.
 Figure \ref{fig:dts_fd_block_diagram} illustrates the location of DTS hardware at the far detector.
@@ -42,19 +82,15 @@ Figure \ref{fig:dts_fd_block_diagram} illustrates the location of DTS hardware a
 \label{fig:dts_fd_block_diagram}
 \end{figure}
 
-\section{Above Ground Hardware}
+\subsection{Overview of the GPS Interface Board (GIB)}
 
-\subsection{GPS Disciplined Oscillator}
-
-The GPS Disciplined Oscillator (GPS-DO) for the DTS is the \href{https://safran-navigation-timing.com/product/securesync-time-and-frequency-reference-system}{SecureSync Time Server} with IRIG output option fitted.
-
-\subsection{GPS Interface Board}
-
-The GIB is coupled to a COTS FPGA module (Enclustra \href{https://www.enclustra.com/en/products/fpga-modules/mars-ax3/}{AX3}/\href{https://www.enclustra.com/en/products/base-boards/mars-pm3/}{PM3} combination) and mounted in a custom 19-inch rack mounting enclosure. Power is provided at 12V from an external COTS AC-DC power supply. Figure \ref{fig:dts_gib_power_block_diagram} illustrates the powering arrangements for the GIB. It is anticipated that, in addition to over-current protection provided by fuses, temperature control and monitoring will be provided an slow control microcontroller with an  ``Ethercat'' interface. If no active slow control is possible an over-temperature fuse will be used. Figure \ref{fig:dts_gibV1_photo} shows the current GIB prototype.
+The GIB, the subject of this review, is coupled to a COTS FPGA module via a standard low pin count FMC connector\cite{ref:fmc}.
+%(Enclustra \href{https://www.enclustra.com/en/products/fpga-modules/mars-ax3/}{AX3}/\href{https://www.enclustra.com/en/products/base-boards/mars-pm3/}{PM3} combination) 
+and mounted in a custom 19-inch rack mounting enclosure. Power is provided at 12V from an external COTS AC-DC power supply. Figure \ref{fig:dts_gib_power_block_diagram} illustrates the powering arrangements for the GIB. In addition to over-current protection provided by a fuse, temperature control and monitoring will be provided an separate PCB housing ESP32 micro-controller implementing an  OPC/UA server\cite{ref:opc_ua}. Figure \ref{fig:dts_gibV1_photo} shows the current GIB prototype.
 
 \begin{figure}[ht]
 \centering
-\includegraphics[width=\linewidth]{dts_gib_power_block_diagram_v1-231219.drawio.pdf}
+\includegraphics[width=\linewidth]{dts_gib_power_block_diagram_v3-250411.drawio.pdf}
 \caption{Block diagram of powering arrangements for GIB}
 \label{fig:dts_gib_power_block_diagram}
 \end{figure}
@@ -66,114 +102,62 @@ The GIB is coupled to a COTS FPGA module (Enclustra \href{https://www.enclustra.
 \label{fig:dts_gibV1_photo}
 \end{figure}
 
-\section{Below Ground Hardware}
+\section{GIB Main PCB}
 
-All DTS hardware will be in 19-inch racks with front-to-back cooling located in the DAQ areas above the cryostats. Figure \ref{fig:dts_crate_block_diagram} illustrates the arrangement of DTS hardware in a rack. Figures \ref{fig:dts-utca-front-view} and \ref{fig:dts-utca-rear-view} illustrate the front and rear of a DTS MicroTCA crate. Figure \ref{fig:dts-utca-test-system-photo} is a photograph of the MicroTCA system used for DTS hardware development.
+The GIB main PCB is powered from 12V with DC-DC converters stepping this down to 5.5V and 3.5V with linear regulators producing 5V , 3.3V and 2.5V rails.
 
-\begin{figure}[ht]
-\centering
-\includegraphics[width=0.7\linewidth]{dts_overall_rack-v1-231215.drawio.pdf}
-\caption{Arrangement of DTS hardware in a DAQ RACK.}
-\label{fig:dts_crate_block_diagram}
+Measurements indicate that the current drawn during operation from the 12V  by the GIB main PCB is 1.6A.
+
+Power enters the main PCB via a \href{https://www.molex.com/en-us/products/part-detail/1724480004}{Molex 172448-0004} connector. There are two contact for 12V and two for the return current. Each contact is rated at 13A. The 12V supply current then flows through a fuse rated at 4A.
+
+Fused 12V power is connected to a copper area of approximately 40mm x 50mm on PCB layer 5 by 12 vias each with 0.4mm finished hole size . The ``Via Current Capacity Table'' at \url{https://artist-3d.com/via-current-capacity/} indicates that in isolation each 0.4mm via can carry up to 1.5A each. The via capacity table is illustrated in \ref{fig:via-current-table}. Because the vias are clustered together the maximum current capacity will be less than twelve times the capacity of an isolated via. Using a 2/3 de-rating factor (from FNAL ESH DocDB Document 2781-v8\cite{ref:fnal-esh-design-standards}) the maximum safe current capacity is 12 x 1.5A x 2/3 = 12A - well in excess of the 4A fuse.
+
+The current carrying capacity of the copper plane  is difficult to estimate but clearly in excess of the 4A permitted by the fuse.
+
+The DC-DC switched mode power converters are connected to the copper area on layer 5 by at least four vias each, with a maximum current capacity of 
+4 x 1.5A x 2/3 = 4A . This is marginal but believed to be acceptable even if one of the power converters fails short circuit.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{How to Design PCB Via Current Capacity _ - Artist 3D — Mozilla Firefox 26_03_2024 17_49_05.png}
+    \caption{Table listing maximum current per via}
+    \label{fig:via-current-table}
+\end{figure}
+
+The main PCB is a 10 layer 2.5mm thick PCB. The stack up is shown in figures \ref{fig:gib_main_pcb_cross_section_figure} and \ref{fig:gib_main_pcb_cross_section_details}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\linewidth]{gps_interface_board_ml_v97_cross_section_figure.png}
+    \caption{Illustration of GIB main PCB cross-section}
+    \label{fig:gib_main_pcb_cross_section_figure}
 \end{figure}
 
 \begin{figure}
-  \centering
-  \includegraphics[width=\linewidth]{dts_utca_crate-front-v1-231215.drawio.pdf}
-  \caption{Diagram showing front view of DTS uTCA crate.}
-  \label{fig:dts-utca-front-view}
-\end{figure}
-
-\begin{figure}
-  \centering
-  \includegraphics[width=0.8\linewidth]{dts_utca_crate-rear-v1-231215.drawio.pdf}
-  \caption{Diagram showing rear view of DTS uTCA crate.}
-  \label{fig:dts-utca-rear-view}
-\end{figure}
-
-\begin{figure}
-  \centering
-  \includegraphics[width=0.8\linewidth]{P7150030.JPG}
-  \caption{Photograph of MicroTCA test system.}
-  \label{fig:dts-utca-test-system-photo}
+    \centering
+    \includegraphics[width=0.8\linewidth]{gps_interface_board_ml_v97_cross_section_allegro_window.png}
+    \caption{Details of GIB main PCB cross-section}
+    \label{fig:gib_main_pcb_cross_section_details}
 \end{figure}
 
 
-\subsection{MicroTCA Crate}
 
-The MicroTCA crate is a Schroff/nVent model \href{https://schroff.nvent.com/en-gb/products/enc11890-170}{11890170} unit with front-to-back cooling, 12 double-height,double-width slots and two redundant fan-trays 
 
-\subsection{COTS MicroTCA Modules}
 
-\begin{itemize}
-    \item {\bf Power Supply Module}   \href{https://nateurope.com/product/nat-pm-ac600-600w-ac-power-module-mtca0/}{NAT-PM-AC600}. Two per crate in redundant configuration.
-    \item {\bf MicroTCA Carrier Hub} \href{https://nateurope.com/product/nat-mch/}{NAT-MCH}. Provides a setup, control and monitoring link over 1GBit/s Ethernet.
-    \item {\bf JTAG Service Module} \href{https://nateurope.com/product/nat-jsm/}{NAT-JSM}. Used for in-situ firmware updates.
-\end{itemize}
+A zip archive containing the manufacturing data for the GIB main PCB can be downloaded from \href{URL YYY}{EDMS xxxxx}
 
-\subsection{Custom/Semi-Custom MicroTCA Modules}
+\section{Total Electrical Power}
 
-Each DTS MicroTCA crate has a single MIB and up to twelve semi-custom AFC boards. Each AFC board has a FIB mounted on it.
-
-\subsubsection{MIB}
-
-Timing signals carried on fibres from the GIBs are received at the underground MicroTCA crates by the MicroTCA Interface Board. The MIB has the same form-factor as an MCH with a tongue-2 connector carrying clock and timing data. There is a MIB located in the primary MCH slot of each MicroTCA crate. Figure \ref{fig:dts-mib-powering} illustrates the powering circuitry of the MIB. MicroTCA boards do not usually have fuses since over-current protection is handled by negotiation between the board module management controller (MMC) and the MicroTCA power supply to set a suitable current limit. However, in order to avoid the effort needed to fully qualify our MMC firmware we have added fuses to the MIB as a secondary over-current protection mechanism. Figure \ref{fig:dts-mib-photo} shows a photograph of a prototype MIB.
-
-\begin{figure}
-  \centering
-  \includegraphics[width=\linewidth]{dts_mib_power_block_diagram_v1-231215.drawio.pdf}
-  \caption{Block diagram showing powering of MIB}
-  \label{fig:dts-mib-powering}
-\end{figure}
-
-\begin{figure}
-  \centering
-  \includegraphics[width=\linewidth]{mib_photo_P8180060.JPG}
-  \caption{Photograph of MIB v2}
-  \label{fig:dts-mib-photo}
-\end{figure}
-
-\subsubsection{FIB}
-
-The fibre interface board is a double width FMC format board with eight SFP sockets mounted on it. It draws its power from the AFC it is mounted on. Figure \ref{fig:dts-fib-photo} shows a prototype FIB.
-
-\begin{figure}
-  \centering
-  \includegraphics[width=\linewidth]{P7230002.JPG}
-  \caption{Photograph of FIB v1.}
-  \label{fig:dts-fib-photo}
-\end{figure}
-
-\subsubsection{AFC}
-
-The \href{https://ohwr.org/project/afc/wikis/home}{AFC} is an \href{https://ohwr.org}{Open Hardware} design manufactured and supplied by a commercial firm  (\href{https://creotech.pl/}{Creotech}). We are using version-4 of the board with minor modifications to the clocking circuitry. Figure \ref{fig:dts-afc_fib-powering} illustrates the powering arrangements for the AFC/FIB combination. Figure \ref{fig:dts-afc_fib-photo} is a photograph of an AFC with prototype FIB mounted.
-
-\begin{figure}
-  \centering
-  \includegraphics[width=\linewidth]{dts_afc_fib_power_block_diagram_v2-240116.drawio.pdf}
-  \caption{Block diagram showing powering of AFC and FIB.}
-  \label{fig:dts-afc_fib-powering}
-\end{figure}
-
-\begin{figure}
-  \centering
-  \includegraphics[width=0.8\linewidth]{OI000296.JPG}
-  \caption{Photograph of AFC with FIB mounted.}
-  \label{fig:dts-afc_fib-photo}
-\end{figure}
-
-\section{Electrical Power}
-
-Total electrical power of below ground electrical components is estimated to be 185W $\pm$ 20\% per crate, or 370W per cavern. This is based on a mixture of measurements of prototypes and data sheets of COTS components.
+Total electrical power of GIB - comprising of the main PCB, FPGA board, the slow control board and the fans is estimated to be at most 2 Amps at 12V. This is based on measurements from the current prototype 
 
 \section{Optical Power}
 
-Each DTS MicroTCA crate will house up to 96 SFP optical transceivers. Each SFP will have a 1000Base-BX interface and a maximum laser power of 2mW at 1490,1550 or 1570nm. Because each individual SFP has an optical output power less than 5mW, and is hence a category 3R laser, no special safety precautions are needed.
+Each DTS GIB will house up to six SFP optical transceivers. Each SFP will have a 1000Base-BX interface and a maximum laser power of 2mW at 1490,1550 or 1570nm. Because each individual SFP has an optical output power less than 5mW, and is hence a category 3R laser, no special safety precautions are needed.
 
 
 %\section*{Acknowledgments}
 
-
-%\bibliography{sample}
+\bibliographystyle{abbrv}
+\bibliography{sample}
 
 \end{document}
